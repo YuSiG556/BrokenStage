@@ -1,11 +1,13 @@
-# Unity 6000.5.6f1용 2.5D 6레인 리듬게임 프로토타입
+# Unity 6000.5.6f1용 2D 6레인 리듬게임 프로토타입
 
-Unity **6000.5.6f1**과 Unity Input System **1.20.0**을 기준으로 만든 최소기능 프로토타입입니다. 프로젝트 세카이의 세로 원근 레인 연출에서 아이디어만 참고했으며, 원작의 이미지·음원·캐릭터·UI는 사용하지 않았습니다.
+Unity **6000.5.6f1**과 Unity Input System **1.20.0**을 기준으로 만든 2D 최소기능 프로토타입입니다. 프로젝트 세카이의 세로 원근 레인 연출에서 아이디어만 참고했으며, 원작의 이미지·음원·캐릭터·UI는 사용하지 않았습니다.
 
 ## 구현 기능
 
 - 먼 쪽이 좁고 가까운 쪽이 넓은 사다리꼴 플레이 필드
-- Perspective 카메라를 이용한 2.5D 원근감
+- Orthographic 카메라와 XY 평면만 사용하는 순수 2D 렌더링
+- 노트 위치와 크기 보간으로 표현하는 가상 원근감
+- 일정 속도 선형 이동으로 판정선 근처 감속 현상 제거
 - 6개 레인
 - Input Action `Lane1`~`Lane6`
 - 키보드 `A S D J K L` 바인딩
@@ -14,7 +16,7 @@ Unity **6000.5.6f1**과 Unity Input System **1.20.0**을 기준으로 만든 최
 - 0.52~0.78초 간격으로 빠르게 다가오는 직선형 노트
 - PERFECT / GOOD / MISS 판정
 - 점수, 현재 콤보, 최고 콤보 표시
-- 네온 레일, 원근 그리드, 사이버 시티 타워, 홀로그램 게이트로 구성된 사이버펑크 무대
+- 플레이 필드를 침범하지 않는 상단 사이버 시티 배경
 - 외부 이미지나 유료 에셋 불필요
 
 ## 프로젝트 실행 방법
@@ -87,13 +89,15 @@ Unity 프로젝트는 실행 파일을 더블클릭하는 방식이 아니라 Hu
 
 Hierarchy의 `Rhythm Game Prototype`을 선택한 다음 Inspector에서 조절합니다.
 
-- `Note Speed`: 노트 속도, 기본값 15
+- `Note Travel Time`: 노트가 위쪽에서 아래쪽까지 이동하는 시간, 기본값 1.38초
 - `Min Spawn Interval`: 노트 묶음의 최소 생성 간격, 기본값 0.52초
 - `Max Spawn Interval`: 노트 묶음의 최대 생성 간격, 기본값 0.78초
 - `Double Note Chance`: 2개 동시 노트 확률, 기본값 0.32
 - `Near Half Width`: 플레이 필드 가까운 쪽 절반 폭
 - `Far Half Width`: 플레이 필드 먼 쪽 절반 폭
-- `Judge Z`: 판정선의 깊이 위치
+- `Near Y`, `Far Y`: 가까운 쪽과 먼 쪽의 화면상 Y 위치
+- `Near Half Width`: 가까운 쪽 폭, 기본값 7.00으로 넓게 설정
+- `Judge Y`: 판정선의 화면상 Y 위치, 기본값 -2.78
 - `Input Actions`: `RhythmControls` 입력 에셋 참조
 
 Play 중에 변경한 값은 Play를 종료하면 원래대로 돌아갑니다. 계속 사용할 값은 Play를 끈 상태에서 변경하세요.
@@ -101,11 +105,12 @@ Play 중에 변경한 값은 Play를 종료하면 원래대로 돌아갑니다. 
 ## 코드 구조
 
 - `BuildInputActions()`: 입력 에셋을 불러오고 6개의 액션 준비
-- `BuildCamera()`: 원근 카메라 생성
-- `BuildStage()`: 사다리꼴 판, 레인, 판정선 생성
-- `BuildCyberCity()`: 플레이 필드 양옆의 사이버 시티 생성
+- `Build2DResources()`: 공용 2D 스프라이트와 재질 생성
+- `BuildOrthographicCamera()`: 정사영 2D 카메라 생성
+- `BuildCyberpunkBackground()`: 2D 도시와 사이버펑크 배경 생성
+- `Build2DStage()`: XY 평면의 사다리꼴 판, 레인, 판정선 생성
 - `UpdateSpawner()`: 1~2개 무작위 노트 생성
-- `UpdateNotes()`: 노트를 먼 곳에서 가까운 곳으로 이동
+- `UpdateNoteVisual()`: 노트의 2D 위치와 크기를 보간하여 가상 원근감 표현
 - `HandleLaneActions()`: Input Action 입력 검사
 - `UpdateLaneGlows()`: 누르고 있는 레인을 네온으로 점등
 - `TryHitLane()`: 같은 레인에서 판정선과 가장 가까운 노트 판정

@@ -2,21 +2,22 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-// Unity 6000.5 compatible, asset-free rhythm game prototype.
-// Add this component to one GameObject and press Play.
+// Unity 6000.5 2D rhythm game prototype.
+// All gameplay objects live on the XY plane. Perspective is simulated by
+// interpolating each note's position and size as it approaches the judgement line.
 public class RhythmGamePrototype : MonoBehaviour
 {
     private const int LaneCount = 6;
 
-    [Header("Play field")]
-    public float nearZ = 0.0f;
-    public float farZ = 20.0f;
-    public float nearHalfWidth = 5.8f;
-    public float farHalfWidth = 2.35f;
-    public float judgeZ = 1.15f;
+    [Header("2D Play Field")]
+    public float nearY = -3.05f;
+    public float farY = 3.15f;
+    public float nearHalfWidth = 7.00f;
+    public float farHalfWidth = 2.15f;
+    public float judgeY = -2.78f;
 
     [Header("Notes")]
-    public float noteSpeed = 15.0f;
+    public float noteTravelTime = 1.38f;
     public float minSpawnInterval = 0.52f;
     public float maxSpawnInterval = 0.78f;
     [Range(0.0f, 1.0f)]
@@ -31,27 +32,27 @@ public class RhythmGamePrototype : MonoBehaviour
         "<Keyboard>/a", "<Keyboard>/s", "<Keyboard>/d",
         "<Keyboard>/j", "<Keyboard>/k", "<Keyboard>/l"
     };
+
     private readonly List<FallingNote> notes = new List<FallingNote>();
+    private readonly List<Mesh> runtimeMeshes = new List<Mesh>();
 
     private InputActionMap gameplayActionMap;
     private InputAction[] laneActions;
     private bool ownsRuntimeActionMap;
 
+    private Camera gameCamera;
+    private Texture2D whiteTexture;
+    private Sprite whiteSprite;
+
     private Material boardMaterial;
-    private Material sideFloorMaterial;
     private Material railMaterial;
     private Material railGlowMaterial;
-    private Material gridMaterial;
-    private Material judgeMaterial;
-    private Material noteMaterialA;
-    private Material noteMaterialB;
-    private Material cityMaterialA;
-    private Material cityMaterialB;
-    private Material cityCyanMaterial;
-    private Material cityMagentaMaterial;
     private Material[] laneGlowMaterials;
     private MeshRenderer[] laneGlowRenderers;
-    private Camera gameCamera;
+
+    private SpriteRenderer horizonRenderer;
+    private SpriteRenderer judgementHaloRenderer;
+    private SpriteRenderer judgementLineRenderer;
     private float spawnTimer;
     private float judgementTimer;
     private string judgementText = "READY";
@@ -62,19 +63,21 @@ public class RhythmGamePrototype : MonoBehaviour
     private class FallingNote
     {
         public int lane;
-        public float z;
+        public float progress;
+        public float currentY;
         public GameObject gameObject;
-        public Mesh mesh;
+        public SpriteRenderer renderer;
     }
 
     private void Awake()
     {
         Application.targetFrameRate = 60;
         BuildInputActions();
-        BuildMaterials();
-        BuildCamera();
-        BuildStage();
-        spawnTimer = 0.6f;
+        Build2DResources();
+        BuildOrthographicCamera();
+        BuildCyberpunkBackground();
+        Build2DStage();
+        spawnTimer = 0.75f;
     }
 
     private void OnEnable()
@@ -107,7 +110,6 @@ public class RhythmGamePrototype : MonoBehaviour
             return;
         }
 
-        // Fallback for a manually created scene without the inputactions asset.
         ownsRuntimeActionMap = true;
         gameplayActionMap = new InputActionMap("Gameplay");
         for (int i = 0; i < LaneCount; i++)
@@ -117,6 +119,59 @@ public class RhythmGamePrototype : MonoBehaviour
                 InputActionType.Button,
                 fallbackBindings[i]);
         }
+    }
+
+    private void Build2DResources()
+    {
+        whiteTexture = new Texture2D(1, 1, TextureFormat.RGBA32, false);
+        whiteTexture.name = "Runtime White Pixel";
+        whiteTexture.filterMode = FilterMode.Point;
+        whiteTexture.wrapMode = TextureWrapMode.Clamp;
+        whiteTexture.SetPixel(0, 0, Color.white);
+        whiteTexture.Apply();
+        whiteSprite = Sprite.Create(
+            whiteTexture,
+            new Rect(0, 0, 1, 1),
+            new Vector2(0.5f, 0.5f),
+            1.0f);
+        whiteSprite.name = "Runtime White Sprite";
+
+        Shader shader = Shader.Find("Sprites/Default");
+        boardMaterial = NewMaterial(shader, new Color(0.012f, 0.018f, 0.060f, 1.0f));
+        railMaterial = NewMaterial(shader, new Color(0.08f, 0.92f, 1.00f, 1.0f));
+        railGlowMaterial = NewMaterial(shader, new Color(0.06f, 0.82f, 1.00f, 0.23f));
+
+        laneGlowMaterials = new Material[LaneCount];
+        laneGlowRenderers = new MeshRenderer[LaneCount];
+        for (int lane = 0; lane < LaneCount; lane++)
+        {
+            Color color = lane < 3
+                ? new Color(0.05f, 0.95f, 1.00f, 0.30f)
+                : new Color(1.00f, 0.08f, 0.78f, 0.30f);
+            laneGlowMaterials[lane] = NewMaterial(shader, color);
+        }
+    }
+
+    private Material NewMaterial(Shader shader, Color color)
+    {
+        Material material = new Material(shader);
+        material.color = color;
+        return material;
+    }
+
+    private void BuildOrthographicCamera()
+    {
+        GameObject cameraObject = new GameObject("2D Rhythm Camera");
+        cameraObject.transform.parent = transform;
+        cameraObject.tag = "MainCamera";
+        gameCamera = cameraObject.AddComponent<Camera>();
+        gameCamera.orthographic = true;
+        gameCamera.orthographicSize = 5.25f;
+        gameCamera.clearFlags = CameraClearFlags.SolidColor;
+        gameCamera.backgroundColor = new Color(0.004f, 0.006f, 0.025f, 1.0f);
+        gameCamera.nearClipPlane = 0.1f;
+        gameCamera.farClipPlane = 50.0f;
+        cameraObject.transform.position = new Vector3(0.0f, 0.0f, -10.0f);
     }
 
     private void Update()
@@ -133,227 +188,172 @@ public class RhythmGamePrototype : MonoBehaviour
         }
     }
 
-    private void BuildMaterials()
+    private void BuildCyberpunkBackground()
     {
-        Shader shader = Shader.Find("Unlit/Color");
-        Shader transparentShader = Shader.Find("Sprites/Default");
-        if (transparentShader == null)
+        Color[] bands =
         {
-            transparentShader = shader;
+            new Color(0.010f, 0.008f, 0.040f, 1.0f),
+            new Color(0.018f, 0.009f, 0.060f, 1.0f),
+            new Color(0.028f, 0.010f, 0.078f, 1.0f),
+            new Color(0.022f, 0.020f, 0.082f, 1.0f),
+            new Color(0.008f, 0.030f, 0.070f, 1.0f)
+        };
+
+        for (int i = 0; i < bands.Length; i++)
+        {
+            float y = -4.2f + i * 2.1f;
+            CreateSpriteRect("Background Band", new Vector2(0.0f, y), new Vector2(19.0f, 2.15f), bands[i], -50);
         }
 
-        boardMaterial = NewMaterial(shader, new Color(0.012f, 0.018f, 0.055f, 1.0f));
-        sideFloorMaterial = NewMaterial(shader, new Color(0.018f, 0.008f, 0.040f, 1.0f));
-        railMaterial = NewMaterial(shader, new Color(0.10f, 0.92f, 1.00f, 1.0f));
-        railGlowMaterial = NewMaterial(transparentShader, new Color(0.10f, 0.80f, 1.00f, 0.22f));
-        gridMaterial = NewMaterial(transparentShader, new Color(0.25f, 0.18f, 0.70f, 0.38f));
-        judgeMaterial = NewMaterial(shader, new Color(1.00f, 0.18f, 0.78f, 1.0f));
-        noteMaterialA = NewMaterial(shader, new Color(0.16f, 1.00f, 0.92f, 1.0f));
-        noteMaterialB = NewMaterial(shader, new Color(1.00f, 0.20f, 0.82f, 1.0f));
-        cityMaterialA = NewMaterial(shader, new Color(0.025f, 0.012f, 0.075f, 1.0f));
-        cityMaterialB = NewMaterial(shader, new Color(0.055f, 0.015f, 0.105f, 1.0f));
-        cityCyanMaterial = NewMaterial(shader, new Color(0.05f, 0.75f, 0.92f, 1.0f));
-        cityMagentaMaterial = NewMaterial(shader, new Color(0.95f, 0.08f, 0.72f, 1.0f));
-
-        laneGlowMaterials = new Material[LaneCount];
-        laneGlowRenderers = new MeshRenderer[LaneCount];
-        for (int i = 0; i < LaneCount; i++)
+        for (int i = 0; i < 24; i++)
         {
-            Color glowColor = i < 3
-                ? new Color(0.05f, 0.95f, 1.00f, 0.32f)
-                : new Color(1.00f, 0.08f, 0.78f, 0.32f);
-            laneGlowMaterials[i] = NewMaterial(transparentShader, glowColor);
+            float x = -8.8f + i * 0.76f;
+            float y = 2.1f + ((i * 13) % 7) * 0.31f;
+            float size = 0.018f + (i % 3) * 0.012f;
+            Color starColor = i % 2 == 0
+                ? new Color(0.30f, 0.90f, 1.00f, 0.85f)
+                : new Color(1.00f, 0.25f, 0.82f, 0.80f);
+            CreateSpriteRect("Data Star", new Vector2(x, y), new Vector2(size, size), starColor, -45);
         }
-    }
 
-    private Material NewMaterial(Shader shader, Color color)
-    {
-        Material material = new Material(shader);
-        material.color = color;
-        return material;
-    }
-
-    private void BuildCamera()
-    {
-        GameObject cameraObject = new GameObject("Rhythm Camera");
-        cameraObject.tag = "MainCamera";
-        gameCamera = cameraObject.AddComponent<Camera>();
-        gameCamera.clearFlags = CameraClearFlags.SolidColor;
-        gameCamera.backgroundColor = new Color(0.008f, 0.012f, 0.035f, 1.0f);
-        gameCamera.fieldOfView = 55.0f;
-        gameCamera.nearClipPlane = 0.1f;
-        gameCamera.farClipPlane = 100.0f;
-        cameraObject.transform.position = new Vector3(0.0f, 8.0f, -9.2f);
-        cameraObject.transform.rotation = Quaternion.LookRotation(
-            new Vector3(0.0f, 0.0f, 8.2f) - cameraObject.transform.position,
-            Vector3.up);
-    }
-
-    private void BuildStage()
-    {
-        CreateQuadMesh(
-            "Left Cyber Deck",
-            new Vector3(-13.0f, -0.03f, nearZ),
-            new Vector3(-nearHalfWidth, -0.03f, nearZ),
-            new Vector3(-13.0f, -0.03f, farZ + 5.0f),
-            new Vector3(-farHalfWidth, -0.03f, farZ + 5.0f),
-            sideFloorMaterial);
-
-        CreateQuadMesh(
-            "Right Cyber Deck",
-            new Vector3(nearHalfWidth, -0.03f, nearZ),
-            new Vector3(13.0f, -0.03f, nearZ),
-            new Vector3(farHalfWidth, -0.03f, farZ + 5.0f),
-            new Vector3(13.0f, -0.03f, farZ + 5.0f),
-            sideFloorMaterial);
-
-        CreateQuadMesh(
-            "Play Field",
-            new Vector3(-nearHalfWidth, 0.0f, nearZ),
-            new Vector3(nearHalfWidth, 0.0f, nearZ),
-            new Vector3(-farHalfWidth, 0.0f, farZ),
-            new Vector3(farHalfWidth, 0.0f, farZ),
-            boardMaterial);
-
-        for (int i = 0; i <= LaneCount; i++)
+        for (int i = 0; i < 18; i++)
         {
-            float ratio = (float)i / LaneCount;
-            float nearX = Mathf.Lerp(-nearHalfWidth, nearHalfWidth, ratio);
-            float farX = Mathf.Lerp(-farHalfWidth, farHalfWidth, ratio);
-            CreateRail("Lane Glow Rail " + i, nearX, farX, 0.085f, railGlowMaterial);
-            CreateRail("Lane Rail " + i, nearX, farX, 0.025f, railMaterial);
+            float side = i < 9 ? -1.0f : 1.0f;
+            int index = i % 9;
+            float width = 0.52f + (index % 3) * 0.20f;
+            float height = 1.0f + ((index * 5) % 6) * 0.42f;
+            float x = side * (farHalfWidth + 1.10f + index * 0.58f);
+            float y = farY + 0.05f + height * 0.5f;
+            Color buildingColor = index % 3 == 0
+                ? new Color(0.020f, 0.018f, 0.085f, 1.0f)
+                : (index % 3 == 1
+                    ? new Color(0.075f, 0.012f, 0.100f, 1.0f)
+                    : new Color(0.018f, 0.055f, 0.085f, 1.0f));
+            CreateSpriteRect("2D Cyber Tower", new Vector2(x, y), new Vector2(width, height), buildingColor, -35);
+
+            // Keep city lights, but omit the nearest pair marked in red.
+            if (index > 0)
+            {
+                Color windowColor = (index + i / 9) % 3 == 0
+                    ? new Color(0.05f, 0.82f, 1.00f, 0.92f)
+                    : ((index + i / 9) % 3 == 1
+                        ? new Color(1.00f, 0.08f, 0.72f, 0.92f)
+                        : new Color(1.00f, 0.62f, 0.10f, 0.92f));
+                CreateSpriteRect(
+                    "Tower Neon Strip",
+                    new Vector2(x - side * width * 0.22f, y + height * 0.05f),
+                    new Vector2(0.045f, height * 0.58f),
+                    windowColor,
+                    -34);
+            }
+
         }
+
+        horizonRenderer = CreateSpriteRect(
+            "Digital Horizon",
+            new Vector2(0.0f, farY - 0.02f),
+            new Vector2(8.4f, 0.055f),
+            new Color(0.30f, 0.95f, 1.00f, 0.85f),
+            -25);
+    }
+
+    private void Build2DStage()
+    {
+        CreateQuadMesh2D(
+            "2D Trapezoid Play Field",
+            new Vector2(-nearHalfWidth, nearY),
+            new Vector2(nearHalfWidth, nearY),
+            new Vector2(-farHalfWidth, farY),
+            new Vector2(farHalfWidth, farY),
+            boardMaterial,
+            -10);
 
         for (int lane = 0; lane < LaneCount; lane++)
         {
             CreateLaneGlow(lane);
         }
 
-        for (float z = 2.6f; z < farZ - 0.5f; z += 2.45f)
+        for (int boundary = 0; boundary <= LaneCount; boundary++)
         {
-            CreateGridBar(z);
+            float ratio = (float)boundary / LaneCount;
+            float nearX = Mathf.Lerp(-nearHalfWidth, nearHalfWidth, ratio);
+            float farX = Mathf.Lerp(-farHalfWidth, farHalfWidth, ratio);
+            CreateRail("Lane Halo " + boundary, nearX, farX, 0.070f, railGlowMaterial, -3);
+            CreateRail("Lane Line " + boundary, nearX, farX, 0.018f, railMaterial, 1);
         }
 
-        CreateHorizontalBar("Judgement Line", judgeZ, 0.0f, judgeMaterial);
-        CreateHorizontalBar("Far Gate", farZ - 0.15f, -0.01f, railMaterial);
-        BuildCyberCity();
-        BuildHorizonPortal();
+        for (int i = 1; i <= 9; i++)
+        {
+            float t = i / 10.0f;
+            float perspectiveT = t * t;
+            float y = Mathf.Lerp(farY, nearY, perspectiveT);
+            float halfWidth = Mathf.Lerp(farHalfWidth, nearHalfWidth, perspectiveT);
+            CreateSpriteRect(
+                "Perspective Grid",
+                new Vector2(0.0f, y),
+                new Vector2(halfWidth * 2.0f, 0.025f + perspectiveT * 0.018f),
+                new Color(0.36f, 0.18f, 0.82f, 0.46f),
+                -2);
+        }
+
+        float judgeHalfWidth = HalfWidthAtY(judgeY);
+        judgementHaloRenderer = CreateSpriteRect(
+            "2D Judgement Halo",
+            new Vector2(0.0f, judgeY),
+            new Vector2(judgeHalfWidth * 2.0f, 0.24f),
+            new Color(1.00f, 0.08f, 0.72f, 0.18f),
+            7);
+        judgementLineRenderer = CreateSpriteRect(
+            "2D Judgement Line",
+            new Vector2(0.0f, judgeY),
+            new Vector2(judgeHalfWidth * 2.0f, 0.065f),
+            new Color(1.00f, 0.18f, 0.82f, 1.0f),
+            8);
+
     }
 
     private void CreateLaneGlow(int lane)
     {
         float nearLaneWidth = nearHalfWidth * 2.0f / LaneCount;
         float farLaneWidth = farHalfWidth * 2.0f / LaneCount;
-        float nearLeft = -nearHalfWidth + nearLaneWidth * lane + 0.05f;
-        float nearRight = nearLeft + nearLaneWidth - 0.10f;
-        float farLeft = -farHalfWidth + farLaneWidth * lane + 0.025f;
-        float farRight = farLeft + farLaneWidth - 0.05f;
+        float nearLeft = -nearHalfWidth + nearLaneWidth * lane + 0.04f;
+        float nearRight = nearLeft + nearLaneWidth - 0.08f;
+        float farLeft = -farHalfWidth + farLaneWidth * lane + 0.02f;
+        float farRight = farLeft + farLaneWidth - 0.04f;
 
-        GameObject glow = CreateQuadMesh(
+        GameObject glow = CreateQuadMesh2D(
             "Held Lane Glow " + (lane + 1),
-            new Vector3(nearLeft, 0.018f, nearZ),
-            new Vector3(nearRight, 0.018f, nearZ),
-            new Vector3(farLeft, 0.018f, farZ),
-            new Vector3(farRight, 0.018f, farZ),
-            laneGlowMaterials[lane]);
+            new Vector2(nearLeft, nearY),
+            new Vector2(nearRight, nearY),
+            new Vector2(farLeft, farY),
+            new Vector2(farRight, farY),
+            laneGlowMaterials[lane],
+            -1);
 
         laneGlowRenderers[lane] = glow.GetComponent<MeshRenderer>();
         laneGlowRenderers[lane].enabled = false;
     }
 
-    private void CreateGridBar(float z)
+    private void CreateRail(string objectName, float nearX, float farX, float halfThickness, Material material, int sortingOrder)
     {
-        float halfWidth = HalfWidthAtZ(z);
-        float depth = 0.025f;
-        CreateQuadMesh(
-            "Cyber Grid " + z,
-            new Vector3(-halfWidth, 0.012f, z - depth),
-            new Vector3(halfWidth, 0.012f, z - depth),
-            new Vector3(-halfWidth, 0.012f, z + depth),
-            new Vector3(halfWidth, 0.012f, z + depth),
-            gridMaterial);
-    }
-
-    private void BuildCyberCity()
-    {
-        for (int sideIndex = 0; sideIndex < 2; sideIndex++)
-        {
-            float side = sideIndex == 0 ? -1.0f : 1.0f;
-            for (int i = 0; i < 9; i++)
-            {
-                float z = 1.8f + i * 2.65f;
-                float height = 1.4f + ((i * 7) % 5) * 0.72f;
-                float width = 0.72f + (i % 3) * 0.23f;
-                float x = side * (HalfWidthAtZ(Mathf.Min(z, farZ)) + 1.55f + (i % 2) * 0.48f);
-                Material buildingMaterial = i % 2 == 0 ? cityMaterialA : cityMaterialB;
-                CreateBox("Cyber Tower", new Vector3(x, height * 0.5f, z), new Vector3(width, height, 0.85f), buildingMaterial);
-
-                Material accent = (i + sideIndex) % 2 == 0 ? cityCyanMaterial : cityMagentaMaterial;
-                float innerFaceX = x - side * (width * 0.52f);
-                CreateBox(
-                    "Tower Neon",
-                    new Vector3(innerFaceX, height * 0.58f, z - 0.44f),
-                    new Vector3(0.055f, height * 0.55f, 0.035f),
-                    accent);
-            }
-        }
-    }
-
-    private void BuildHorizonPortal()
-    {
-        float z = farZ + 0.35f;
-        CreateBox("Horizon Left", new Vector3(-farHalfWidth - 0.35f, 1.7f, z), new Vector3(0.10f, 3.4f, 0.10f), cityCyanMaterial);
-        CreateBox("Horizon Right", new Vector3(farHalfWidth + 0.35f, 1.7f, z), new Vector3(0.10f, 3.4f, 0.10f), cityMagentaMaterial);
-        CreateBox("Horizon Top", new Vector3(0.0f, 3.4f, z), new Vector3(farHalfWidth * 2.0f + 0.8f, 0.10f, 0.10f), railMaterial);
-    }
-
-    private GameObject CreateBox(string objectName, Vector3 position, Vector3 scale, Material material)
-    {
-        GameObject box = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        box.name = objectName;
-        box.transform.parent = transform;
-        box.transform.position = position;
-        box.transform.localScale = scale;
-        box.GetComponent<MeshRenderer>().sharedMaterial = material;
-        Collider boxCollider = box.GetComponent<Collider>();
-        if (boxCollider != null)
-        {
-            Destroy(boxCollider);
-        }
-        return box;
-    }
-
-    private void CreateRail(string objectName, float nearX, float farX, float halfThickness, Material material)
-    {
-        CreateQuadMesh(
+        CreateQuadMesh2D(
             objectName,
-            new Vector3(nearX - halfThickness, 0.025f, nearZ),
-            new Vector3(nearX + halfThickness, 0.025f, nearZ),
-            new Vector3(farX - halfThickness * 0.45f, 0.025f, farZ),
-            new Vector3(farX + halfThickness * 0.45f, 0.025f, farZ),
-            material);
+            new Vector2(nearX - halfThickness, nearY),
+            new Vector2(nearX + halfThickness, nearY),
+            new Vector2(farX - halfThickness * 0.45f, farY),
+            new Vector2(farX + halfThickness * 0.45f, farY),
+            material,
+            sortingOrder);
     }
 
-    private void CreateHorizontalBar(string objectName, float z, float y, Material material)
-    {
-        float halfWidth = HalfWidthAtZ(z);
-        float depth = 0.13f;
-        CreateQuadMesh(
-            objectName,
-            new Vector3(-halfWidth, y + 0.045f, z - depth),
-            new Vector3(halfWidth, y + 0.045f, z - depth),
-            new Vector3(-halfWidth, y + 0.045f, z + depth),
-            new Vector3(halfWidth, y + 0.045f, z + depth),
-            material);
-    }
-
-    private GameObject CreateQuadMesh(
+    private GameObject CreateQuadMesh2D(
         string objectName,
-        Vector3 nearLeft,
-        Vector3 nearRight,
-        Vector3 farLeft,
-        Vector3 farRight,
-        Material material)
+        Vector2 bottomLeft,
+        Vector2 bottomRight,
+        Vector2 topLeft,
+        Vector2 topRight,
+        Material material,
+        int sortingOrder)
     {
         GameObject meshObject = new GameObject(objectName);
         meshObject.transform.parent = transform;
@@ -361,12 +361,33 @@ public class RhythmGamePrototype : MonoBehaviour
         MeshRenderer renderer = meshObject.AddComponent<MeshRenderer>();
         Mesh mesh = new Mesh();
         mesh.name = objectName + " Mesh";
-        mesh.vertices = new Vector3[] { nearLeft, nearRight, farLeft, farRight };
+        mesh.vertices = new Vector3[]
+        {
+            new Vector3(bottomLeft.x, bottomLeft.y, 0.0f),
+            new Vector3(bottomRight.x, bottomRight.y, 0.0f),
+            new Vector3(topLeft.x, topLeft.y, 0.0f),
+            new Vector3(topRight.x, topRight.y, 0.0f)
+        };
         mesh.triangles = new int[] { 0, 2, 1, 1, 2, 3 };
         mesh.RecalculateBounds();
+        runtimeMeshes.Add(mesh);
         filter.sharedMesh = mesh;
         renderer.sharedMaterial = material;
+        renderer.sortingOrder = sortingOrder;
         return meshObject;
+    }
+
+    private SpriteRenderer CreateSpriteRect(string objectName, Vector2 position, Vector2 size, Color color, int sortingOrder)
+    {
+        GameObject spriteObject = new GameObject(objectName);
+        spriteObject.transform.parent = transform;
+        spriteObject.transform.position = new Vector3(position.x, position.y, 0.0f);
+        spriteObject.transform.localScale = new Vector3(size.x, size.y, 1.0f);
+        SpriteRenderer renderer = spriteObject.AddComponent<SpriteRenderer>();
+        renderer.sprite = whiteSprite;
+        renderer.color = color;
+        renderer.sortingOrder = sortingOrder;
+        return renderer;
     }
 
     private void UpdateSpawner()
@@ -379,49 +400,50 @@ public class RhythmGamePrototype : MonoBehaviour
 
         if (Random.value < doubleNoteChance)
         {
-            // Double notes always use one left-hand lane and one right-hand lane.
             int leftLane = Random.Range(0, 3);
             int rightLane = Random.Range(3, 6);
-            SpawnNote(leftLane, noteMaterialA);
-            SpawnNote(rightLane, noteMaterialB);
+            SpawnNote(leftLane);
+            SpawnNote(rightLane);
         }
         else
         {
-            int lane = Random.Range(0, LaneCount);
-            SpawnNote(lane, lane < 3 ? noteMaterialA : noteMaterialB);
+            SpawnNote(Random.Range(0, LaneCount));
         }
 
         spawnTimer = Random.Range(minSpawnInterval, maxSpawnInterval);
     }
 
-    private void SpawnNote(int lane, Material material)
+    private void SpawnNote(int lane)
     {
-        GameObject noteObject = new GameObject("Note Lane " + (lane + 1));
-        noteObject.transform.parent = transform;
-        MeshFilter filter = noteObject.AddComponent<MeshFilter>();
-        MeshRenderer renderer = noteObject.AddComponent<MeshRenderer>();
-        Mesh mesh = new Mesh();
-        mesh.name = "Falling Note Mesh";
-        filter.sharedMesh = mesh;
-        renderer.sharedMaterial = material;
+        Color noteColor = lane < 3
+            ? new Color(0.12f, 1.00f, 0.92f, 1.0f)
+            : new Color(1.00f, 0.18f, 0.82f, 1.0f);
+        SpriteRenderer renderer = CreateSpriteRect(
+            "2D Note Lane " + (lane + 1),
+            new Vector2(0.0f, farY),
+            new Vector2(0.40f, 0.08f),
+            noteColor,
+            25);
 
         FallingNote note = new FallingNote();
         note.lane = lane;
-        note.z = farZ - 0.35f;
-        note.gameObject = noteObject;
-        note.mesh = mesh;
+        note.progress = 0.0f;
+        note.currentY = farY;
+        note.gameObject = renderer.gameObject;
+        note.renderer = renderer;
         notes.Add(note);
-        UpdateNoteMesh(note);
+        UpdateNoteVisual(note);
     }
 
     private void UpdateNotes()
     {
+        float safeTravelTime = Mathf.Max(0.15f, noteTravelTime);
         for (int i = notes.Count - 1; i >= 0; i--)
         {
             FallingNote note = notes[i];
-            note.z -= noteSpeed * Time.deltaTime;
+            note.progress += Time.deltaTime / safeTravelTime;
 
-            if (note.z < nearZ - 0.75f)
+            if (note.progress > 1.06f)
             {
                 combo = 0;
                 ShowJudgement("MISS");
@@ -429,45 +451,43 @@ public class RhythmGamePrototype : MonoBehaviour
                 continue;
             }
 
-            UpdateNoteMesh(note);
+            UpdateNoteVisual(note);
         }
     }
 
-    private void UpdateNoteMesh(FallingNote note)
+    private void UpdateNoteVisual(FallingNote note)
     {
-        float halfWidth = HalfWidthAtZ(note.z);
+        float t = Mathf.Clamp01(note.progress);
+        // Linear interpolation keeps the falling speed constant all the way to
+        // the bottom. SmoothStep caused an unwanted slowdown near the judgement line.
+        float halfWidth = Mathf.Lerp(farHalfWidth, nearHalfWidth, t);
         float laneWidth = halfWidth * 2.0f / LaneCount;
-        float centerX = -halfWidth + laneWidth * (note.lane + 0.5f);
-        float noteHalfWidth = laneWidth * 0.39f;
-        float halfDepth = Mathf.Lerp(0.10f, 0.24f, 1.0f - NormalizedZ(note.z));
-        float y = 0.10f;
+        float x = -halfWidth + laneWidth * (note.lane + 0.5f);
+        float y = Mathf.Lerp(farY, nearY, t);
 
-        note.mesh.Clear();
-        note.mesh.vertices = new Vector3[]
-        {
-            new Vector3(centerX - noteHalfWidth, y, note.z - halfDepth),
-            new Vector3(centerX + noteHalfWidth, y, note.z - halfDepth),
-            new Vector3(centerX - noteHalfWidth, y, note.z + halfDepth),
-            new Vector3(centerX + noteHalfWidth, y, note.z + halfDepth)
-        };
-        note.mesh.triangles = new int[] { 0, 2, 1, 1, 2, 3 };
-        note.mesh.RecalculateBounds();
+        note.currentY = y;
+        note.gameObject.transform.position = new Vector3(x, y, 0.0f);
+        note.gameObject.transform.localScale = new Vector3(
+            laneWidth * 0.78f,
+            Mathf.Lerp(0.075f, 0.19f, t),
+            1.0f);
+
+        float pulse = 0.90f + Mathf.Sin(Time.time * 18.0f + note.lane) * 0.10f;
+        Color baseColor = note.lane < 3
+            ? new Color(0.12f, 1.00f, 0.92f, 1.0f)
+            : new Color(1.00f, 0.18f, 0.82f, 1.0f);
+        note.renderer.color = new Color(baseColor.r * pulse, baseColor.g * pulse, baseColor.b * pulse, 1.0f);
     }
 
     private void HandleLaneActions()
     {
         for (int lane = 0; lane < LaneCount; lane++)
         {
-            if (ReadLaneActionDown(lane))
+            if (laneActions[lane].WasPressedThisFrame())
             {
                 TryHitLane(lane);
             }
         }
-    }
-
-    private bool ReadLaneActionDown(int lane)
-    {
-        return laneActions[lane].WasPressedThisFrame();
     }
 
     private bool IsLaneHeld(int lane)
@@ -477,30 +497,35 @@ public class RhythmGamePrototype : MonoBehaviour
 
     private void UpdateLaneGlows()
     {
-        if (laneGlowRenderers == null)
-        {
-            return;
-        }
-
-        float pulse = 0.28f + Mathf.Sin(Time.time * 12.0f) * 0.08f;
+        float alpha = 0.25f + Mathf.Sin(Time.time * 12.0f) * 0.08f;
         for (int lane = 0; lane < LaneCount; lane++)
         {
             bool held = IsLaneHeld(lane);
             laneGlowRenderers[lane].enabled = held;
             if (held)
             {
-                Color glowColor = lane < 3
-                    ? new Color(0.05f, 0.95f, 1.00f, pulse)
-                    : new Color(1.00f, 0.08f, 0.78f, pulse);
-                laneGlowMaterials[lane].color = glowColor;
+                laneGlowMaterials[lane].color = lane < 3
+                    ? new Color(0.05f, 0.95f, 1.00f, alpha)
+                    : new Color(1.00f, 0.08f, 0.78f, alpha);
             }
         }
     }
 
     private void UpdateCyberpunkPulse()
     {
-        float pulse = 0.78f + Mathf.Sin(Time.time * 7.0f) * 0.22f;
-        judgeMaterial.color = new Color(1.0f, 0.10f + pulse * 0.12f, 0.62f + pulse * 0.20f, 1.0f);
+        float pulse = 0.72f + Mathf.Sin(Time.time * 6.0f) * 0.28f;
+        if (judgementLineRenderer != null)
+        {
+            judgementLineRenderer.color = new Color(1.0f, 0.10f + pulse * 0.10f, 0.62f + pulse * 0.25f, 1.0f);
+        }
+        if (judgementHaloRenderer != null)
+        {
+            judgementHaloRenderer.color = new Color(1.0f, 0.05f, 0.72f, 0.10f + pulse * 0.14f);
+        }
+        if (horizonRenderer != null)
+        {
+            horizonRenderer.color = new Color(0.20f + pulse * 0.12f, 0.72f + pulse * 0.25f, 1.0f, 0.75f + pulse * 0.20f);
+        }
     }
 
     private void TryHitLane(int lane)
@@ -515,7 +540,7 @@ public class RhythmGamePrototype : MonoBehaviour
                 continue;
             }
 
-            float distance = Mathf.Abs(notes[i].z - judgeZ);
+            float distance = Mathf.Abs(notes[i].currentY - judgeY);
             if (distance < bestDistance)
             {
                 bestDistance = distance;
@@ -523,12 +548,12 @@ public class RhythmGamePrototype : MonoBehaviour
             }
         }
 
-        if (bestIndex < 0 || bestDistance > 1.15f)
+        if (bestIndex < 0 || bestDistance > 0.52f)
         {
             return;
         }
 
-        if (bestDistance <= 0.45f)
+        if (bestDistance <= 0.22f)
         {
             score += 1000;
             ShowJudgement("PERFECT");
@@ -557,40 +582,35 @@ public class RhythmGamePrototype : MonoBehaviour
         judgementTimer = 0.45f;
     }
 
-    private float HalfWidthAtZ(float z)
+    private float HalfWidthAtY(float y)
     {
-        return Mathf.Lerp(nearHalfWidth, farHalfWidth, NormalizedZ(z));
-    }
-
-    private float NormalizedZ(float z)
-    {
-        return Mathf.Clamp01((z - nearZ) / (farZ - nearZ));
+        float t = Mathf.InverseLerp(farY, nearY, y);
+        return Mathf.Lerp(farHalfWidth, nearHalfWidth, t);
     }
 
     private void OnGUI()
     {
-        DrawScreenRect(new Rect(14, 12, 365, 112), new Color(0.01f, 0.02f, 0.06f, 0.78f));
+        DrawScreenRect(new Rect(14, 12, 365, 112), new Color(0.01f, 0.02f, 0.06f, 0.82f));
         DrawScreenRect(new Rect(14, 12, 5, 112), new Color(0.05f, 0.95f, 1.0f, 0.95f));
-        DrawScreenRect(new Rect(Screen.width - 230, 18, 210, 34), new Color(0.05f, 0.01f, 0.08f, 0.72f));
+        DrawScreenRect(new Rect(Screen.width - 230, 18, 210, 34), new Color(0.05f, 0.01f, 0.08f, 0.78f));
 
         GUIStyle titleStyle = new GUIStyle(GUI.skin.label);
         titleStyle.fontSize = Mathf.Max(20, Screen.height / 32);
         titleStyle.fontStyle = FontStyle.Bold;
-        titleStyle.normal.textColor = Color.white;
+        titleStyle.normal.textColor = new Color(0.30f, 1.0f, 0.95f);
 
         GUIStyle infoStyle = new GUIStyle(GUI.skin.label);
         infoStyle.fontSize = Mathf.Max(15, Screen.height / 48);
         infoStyle.normal.textColor = new Color(0.60f, 0.95f, 1.0f);
 
-        titleStyle.normal.textColor = new Color(0.30f, 1.0f, 0.95f);
-        GUI.Label(new Rect(28, 18, 500, 45), "CYBER//RHYTHM", titleStyle);
+        GUI.Label(new Rect(28, 18, 500, 45), "CYBER//RHYTHM 2D", titleStyle);
         GUI.Label(new Rect(24, 58, 450, 28), "SCORE  " + score, infoStyle);
         GUI.Label(new Rect(24, 84, 450, 28), "COMBO  " + combo + "    BEST  " + bestCombo, infoStyle);
 
         GUIStyle statusStyle = new GUIStyle(infoStyle);
         statusStyle.alignment = TextAnchor.MiddleCenter;
         statusStyle.normal.textColor = new Color(1.0f, 0.25f, 0.80f);
-        GUI.Label(new Rect(Screen.width - 230, 20, 210, 28), "SYSTEM // ONLINE", statusStyle);
+        GUI.Label(new Rect(Screen.width - 230, 20, 210, 28), "2D SYSTEM // ONLINE", statusStyle);
 
         if (judgementTimer > 0.0f || judgementText == "READY")
         {
@@ -627,12 +647,15 @@ public class RhythmGamePrototype : MonoBehaviour
         float startX = (Screen.width - totalWidth) * 0.5f;
         float y = Screen.height - 62.0f;
 
-        for (int i = 0; i < LaneCount; i++)
+        for (int lane = 0; lane < LaneCount; lane++)
         {
-            GUI.backgroundColor = IsLaneHeld(i)
-                ? (i < 3 ? new Color(0.05f, 1.0f, 1.0f) : new Color(1.0f, 0.08f, 0.78f))
+            GUI.backgroundColor = IsLaneHeld(lane)
+                ? (lane < 3 ? new Color(0.05f, 1.0f, 1.0f) : new Color(1.0f, 0.08f, 0.78f))
                 : new Color(0.16f, 0.12f, 0.28f);
-            GUI.Box(new Rect(startX + keyWidth * i + 3.0f, y, keyWidth - 6.0f, 42.0f), laneLabels[i], keyStyle);
+            GUI.Box(
+                new Rect(startX + keyWidth * lane + 3.0f, y, keyWidth - 6.0f, 42.0f),
+                laneLabels[lane],
+                keyStyle);
         }
         GUI.backgroundColor = Color.white;
     }
@@ -644,18 +667,14 @@ public class RhythmGamePrototype : MonoBehaviour
             gameplayActionMap.Dispose();
         }
 
+        for (int i = 0; i < runtimeMeshes.Count; i++)
+        {
+            Destroy(runtimeMeshes[i]);
+        }
+
         Destroy(boardMaterial);
-        Destroy(sideFloorMaterial);
         Destroy(railMaterial);
         Destroy(railGlowMaterial);
-        Destroy(gridMaterial);
-        Destroy(judgeMaterial);
-        Destroy(noteMaterialA);
-        Destroy(noteMaterialB);
-        Destroy(cityMaterialA);
-        Destroy(cityMaterialB);
-        Destroy(cityCyanMaterial);
-        Destroy(cityMagentaMaterial);
 
         if (laneGlowMaterials != null)
         {
@@ -664,5 +683,8 @@ public class RhythmGamePrototype : MonoBehaviour
                 Destroy(laneGlowMaterials[i]);
             }
         }
+
+        Destroy(whiteSprite);
+        Destroy(whiteTexture);
     }
 }
