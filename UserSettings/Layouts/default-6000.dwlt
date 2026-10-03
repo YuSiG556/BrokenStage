@@ -39,9 +39,9 @@ MonoBehaviour:
   m_Children: []
   m_Position:
     serializedVersion: 2
-    x: 671
+    x: 670
     y: 0
-    width: 832
+    width: 833
     height: 675
   m_MinSize: {x: 202, y: 226}
   m_MaxSize: {x: 4002, y: 4026}
@@ -119,7 +119,7 @@ MonoBehaviour:
     serializedVersion: 2
     x: 0
     y: 0
-    width: 394
+    width: 393
     height: 675
   m_MinSize: {x: 201, y: 226}
   m_MaxSize: {x: 4001, y: 4026}
@@ -294,7 +294,7 @@ MonoBehaviour:
   m_Children: []
   m_Position:
     serializedVersion: 2
-    x: 394
+    x: 393
     y: 0
     width: 277
     height: 675
@@ -677,20 +677,20 @@ MonoBehaviour:
   m_LastFolders:
   - Assets
   m_LastFoldersGridSize: 16
-  m_LastProjectPath: C:\Users\user\Documents\UnityProject\ProSekaiLikeProject
+  m_LastProjectPath: C:\Users\user\Documents\GitHub\BrokenStage
   m_LockTracker:
     m_IsLocked: 0
   m_LastLocalAssetsSearchArea: 1
   m_FolderTreeState:
     scrollPos: {x: 0, y: 0}
     m_SelectedIDs:
-    - m_rawData: 568105584918814098
+    - m_rawData: 568105584918814102
     m_LastClickedID:
-      m_rawData: 568105584918814098
+      m_rawData: 568105584918814102
     m_ExpandedIDs:
-    - m_rawData: 568105589213755758
+    - m_rawData: 568105589213755716
     - m_rawData: 0
-    - m_rawData: 568105584918814098
+    - m_rawData: 568105584918814102
     - m_rawData: 568105587066273791
     m_RenameOverlay:
       m_UserAcceptedRename: 0
@@ -725,7 +725,7 @@ MonoBehaviour:
       m_rawData: 0
     m_ExpandedIDs:
     - m_rawData: 0
-    - m_rawData: 568105584918814098
+    - m_rawData: 568105584918814102
     m_RenameOverlay:
       m_UserAcceptedRename: 0
       m_Name: 
@@ -754,9 +754,9 @@ MonoBehaviour:
       m_ResourceFile: 
   m_ListAreaState:
     m_SelectedInstanceIDs:
-    - m_rawData: 568105584918813952
+    - m_rawData: 568105584918813956
     m_LastClickedEntityId:
-      m_rawData: 568105584918813952
+      m_rawData: 568105584918813956
     m_HadKeyboardFocusLastEvent: 0
     m_ExpandedInstanceIDs: []
     m_RenameOverlay:
@@ -866,7 +866,7 @@ MonoBehaviour:
     serializedVersion: 2
     x: 11
     y: 87
-    width: 393
+    width: 392
     height: 649
   m_SerializedDataModeController:
     m_DataMode: 0
@@ -887,11 +887,11 @@ MonoBehaviour:
     m_TreeViewState:
       scrollPos: {x: 0, y: 0}
       m_SelectedIDs:
-      - m_rawData: 568105584918813952
+      - m_rawData: 568105584918813956
       m_LastClickedID:
         m_rawData: 0
       m_ExpandedIDs:
-      - m_rawData: 568105589213756084
+      - m_rawData: 568105589213756042
       m_RenameOverlay:
         m_UserAcceptedRename: 0
         m_Name: 
@@ -939,7 +939,7 @@ MonoBehaviour:
     m_TextWithWhitespace: "Scene\u200B"
   m_Pos:
     serializedVersion: 2
-    x: 405
+    x: 404
     y: 87
     width: 275
     height: 649
@@ -1543,9 +1543,9 @@ MonoBehaviour:
     m_TextWithWhitespace: "Game\u200B"
   m_Pos:
     serializedVersion: 2
-    x: 682
+    x: 681
     y: 87
-    width: 830
+    width: 831
     height: 649
   m_SerializedDataModeController:
     m_DataMode: 0
@@ -1604,10 +1604,10 @@ MonoBehaviour:
       serializedVersion: 2
       x: 0
       y: 21
-      width: 830
+      width: 831
       height: 628
-    m_Scale: {x: 0.43229166, y: 0.43229166}
-    m_Translation: {x: 415, y: 314}
+    m_Scale: {x: 0.4328125, y: 0.4328125}
+    m_Translation: {x: 415.5, y: 314}
     m_MarginLeft: 0
     m_MarginRight: 0
     m_MarginTop: 0
@@ -1615,12 +1615,12 @@ MonoBehaviour:
     m_LastShownAreaInsideMargins:
       serializedVersion: 2
       x: -960
-      y: -726.36145
+      y: -725.48737
       width: 1920
-      height: 1452.7229
+      height: 1450.9747
     m_MinimalGUI: 1
-  m_defaultScale: 0.43229166
-  m_LastWindowPixelSize: {x: 830, y: 649}
+  m_defaultScale: 0.4328125
+  m_LastWindowPixelSize: {x: 831, y: 649}
   m_ClearInEditMode: 1
   m_NoCameraWarning: 1
   m_LowResolutionForAspectRatios: 01000000000100000100

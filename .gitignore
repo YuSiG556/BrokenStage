@@ -1,0 +1,64 @@
+# Unity-generated folders
+/[Ll]ibrary/
+/[Tt]emp/
+/[Oo]bj/
+/[Bb]uild/
+/[Bb]uilds/
+/[Ll]ogs/
+/[Uu]ser[Ss]ettings/
+/[Mm]emoryCaptures/
+/[Rr]ecordings/
+
+# Keep the Asset Store Tools folder, but ignore its generated content
+/[Aa]ssets/AssetStoreTools*
+
+# IDE and editor-generated files
+.vs/
+.vscode/
+.idea/
+ExportedObj/
+*.csproj
+*.unityproj
+*.sln
+*.suo
+*.tmp
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+*.VC.VC.opendb
+*.code-workspace
+
+# Unity-generated metadata for IDE project files
+*.pidb.meta
+*.pdb.meta
+*.mdb.meta
+
+# Crash reports and diagnostics
+sysinfo.txt
+crashlytics-build.properties
+
+# Build artifacts
+*.apk
+*.aab
+*.unitypackage
+*.app
+
+# Addressables generated data
+/[Aa]ssets/[Aa]ddressable[Aa]ssets[Dd]ata/*/*.bin*
+/[Aa]ssets/[Ss]treamingAssets/aa.meta
+/[Aa]ssets/[Ss]treamingAssets/aa/*
+
+# Auto-generated test scenes
+/[Aa]ssets/[Ss]treamingAssets/UnityTestProtocolSettings.json
+
+# OS files
+.DS_Store
+Thumbs.db
+Desktop.ini
+

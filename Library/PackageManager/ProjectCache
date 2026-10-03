@@ -1,6 +1,6 @@
 m_ProjectFiles:
   m_ManifestFileStatus:
-    m_FilePath: C:/Users/user/Documents/UnityProject/ProSekaiLikeProject/Packages/manifest.json
+    m_FilePath: C:/Users/user/Documents/GitHub/BrokenStage/Packages/manifest.json
     m_PathExists: 1
     m_ContentTrackingEnabled: 1
     m_ModificationDate:
@@ -8,7 +8,7 @@ m_ProjectFiles:
       ticks: 639256162490000000
     m_Hash: 591456238
   m_LockFileStatus:
-    m_FilePath: C:/Users/user/Documents/UnityProject/ProSekaiLikeProject/Packages/packages-lock.json
+    m_FilePath: C:/Users/user/Documents/GitHub/BrokenStage/Packages/packages-lock.json
     m_PathExists: 1
     m_ContentTrackingEnabled: 1
     m_ModificationDate:
@@ -19,7 +19,7 @@ m_EmbeddedPackageManifests:
   m_ManifestsStatus: {}
 m_LocalPackages:
   m_LocalFileStatus: []
-m_ProjectPath: C:/Users/user/Documents/UnityProject/ProSekaiLikeProject/Packages
+m_ProjectPath: C:/Users/user/Documents/GitHub/BrokenStage/Packages
 m_EditorVersion: 6000.5.6f1 (0e0577a1a2ac)
 m_ResolvedPackages:
 - packageId: com.unity.inputsystem@1.20.0
@@ -28,7 +28,7 @@ m_ResolvedPackages:
   isInstalled: 1
   version: 1.20.0
   source: 1
-  resolvedPath: C:\Users\user\Documents\UnityProject\ProSekaiLikeProject\Library\PackageCache\com.unity.inputsystem@7a4e1a2a8194
+  resolvedPath: C:\Users\user\Documents\GitHub\BrokenStage\Library\PackageCache\com.unity.inputsystem@7a4e1a2a8194
   assetPath: Packages/com.unity.inputsystem
   name: com.unity.inputsystem
   displayName: Input System
@@ -251,7 +251,7 @@ m_ResolvedPackages:
   isInstalled: 1
   version: 1.0.0
   source: 2
-  resolvedPath: C:\Users\user\Documents\UnityProject\ProSekaiLikeProject\Library\PackageCache\com.unity.modules.uielements
+  resolvedPath: C:\Users\user\Documents\GitHub\BrokenStage\Library\PackageCache\com.unity.modules.uielements
   assetPath: Packages/com.unity.modules.uielements
   name: com.unity.modules.uielements
   displayName: UIElements
@@ -365,7 +365,7 @@ m_ResolvedPackages:
   isInstalled: 1
   version: 1.0.0
   source: 2
-  resolvedPath: C:\Users\user\Documents\UnityProject\ProSekaiLikeProject\Library\PackageCache\com.unity.modules.ui
+  resolvedPath: C:\Users\user\Documents\GitHub\BrokenStage\Library\PackageCache\com.unity.modules.ui
   assetPath: Packages/com.unity.modules.ui
   name: com.unity.modules.ui
   displayName: UI
@@ -455,7 +455,7 @@ m_ResolvedPackages:
   isInstalled: 1
   version: 1.0.0
   source: 2
-  resolvedPath: C:\Users\user\Documents\UnityProject\ProSekaiLikeProject\Library\PackageCache\com.unity.modules.imgui
+  resolvedPath: C:\Users\user\Documents\GitHub\BrokenStage\Library\PackageCache\com.unity.modules.imgui
   assetPath: Packages/com.unity.modules.imgui
   name: com.unity.modules.imgui
   displayName: IMGUI
@@ -545,7 +545,7 @@ m_ResolvedPackages:
   isInstalled: 1
   version: 1.0.0
   source: 2
-  resolvedPath: C:\Users\user\Documents\UnityProject\ProSekaiLikeProject\Library\PackageCache\com.unity.modules.jsonserialize
+  resolvedPath: C:\Users\user\Documents\GitHub\BrokenStage\Library\PackageCache\com.unity.modules.jsonserialize
   assetPath: Packages/com.unity.modules.jsonserialize
   name: com.unity.modules.jsonserialize
   displayName: JSONSerialize
@@ -635,7 +635,7 @@ m_ResolvedPackages:
   isInstalled: 1
   version: 1.0.0
   source: 2
-  resolvedPath: C:\Users\user\Documents\UnityProject\ProSekaiLikeProject\Library\PackageCache\com.unity.modules.hierarchycore
+  resolvedPath: C:\Users\user\Documents\GitHub\BrokenStage\Library\PackageCache\com.unity.modules.hierarchycore
   assetPath: Packages/com.unity.modules.hierarchycore
   name: com.unity.modules.hierarchycore
   displayName: Hierarchy Core
@@ -725,7 +725,7 @@ m_ResolvedPackages:
   isInstalled: 1
   version: 1.0.0
   source: 2
-  resolvedPath: C:\Users\user\Documents\UnityProject\ProSekaiLikeProject\Library\PackageCache\com.unity.modules.physics
+  resolvedPath: C:\Users\user\Documents\GitHub\BrokenStage\Library\PackageCache\com.unity.modules.physics
   assetPath: Packages/com.unity.modules.physics
   name: com.unity.modules.physics
   displayName: Physics
@@ -815,7 +815,7 @@ m_ResolvedPackages:
   isInstalled: 1
   version: 1.0.0
   source: 2
-  resolvedPath: C:\Users\user\Documents\UnityProject\ProSekaiLikeProject\Library\PackageCache\com.unity.modules.animation
+  resolvedPath: C:\Users\user\Documents\GitHub\BrokenStage\Library\PackageCache\com.unity.modules.animation
   assetPath: Packages/com.unity.modules.animation
   name: com.unity.modules.animation
   displayName: Animation
