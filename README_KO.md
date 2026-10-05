@@ -12,8 +12,10 @@ Unity **6000.5.6f1**과 Unity Input System **1.20.0**을 기준으로 만든 최
 - 키를 누르고 있는 동안 해당 레인 전체와 키 표시가 네온으로 점등
 - 1개 또는 왼손·오른손에 하나씩 배치되는 2개 노트 무작위 생성
 - 0.52~0.78초 간격으로 빠르게 다가오는 직선형 노트
-- PERFECT / GOOD / MISS 판정
+- PERFECT / GREAT / GOOD / MISS 판정
 - 점수, 현재 콤보, 최고 콤보 표시
+- 음악 시간과 박자를 공통 기준으로 사용하는 `RhythmClock`
+- 실제 채보가 없을 때는 랜덤 노트, `ChartData`를 연결하면 고정 채보 사용
 - 네온 레일, 원근 그리드, 사이버 시티 타워, 홀로그램 게이트로 구성된 사이버펑크 무대
 - 외부 이미지나 유료 에셋 불필요
 
@@ -100,16 +102,48 @@ Play 중에 변경한 값은 Play를 종료하면 원래대로 돌아갑니다. 
 
 ## 코드 구조
 
-- `BuildInputActions()`: 입력 에셋을 불러오고 6개의 액션 준비
-- `BuildCamera()`: 원근 카메라 생성
-- `BuildStage()`: 사다리꼴 판, 레인, 판정선 생성
-- `BuildCyberCity()`: 플레이 필드 양옆의 사이버 시티 생성
-- `UpdateSpawner()`: 1~2개 무작위 노트 생성
-- `UpdateNotes()`: 노트를 먼 곳에서 가까운 곳으로 이동
-- `HandleLaneActions()`: Input Action 입력 검사
-- `UpdateLaneGlows()`: 누르고 있는 레인을 네온으로 점등
-- `TryHitLane()`: 같은 레인에서 판정선과 가장 가까운 노트 판정
-- `OnGUI()`: 점수, 콤보, 키 안내 표시
+기존의 큰 `RhythmGamePrototype.cs`는 다음 5개 게임플레이 스크립트로 분리했습니다.
+
+| 파일 | 역할 |
+|---|---|
+| `Assets/Scripts/RhythmGameController.cs` | 게임 시작과 종료, Input System 입력, 카메라·플레이필드·사이버 도시·UI 및 다른 시스템 연결 |
+| `Assets/Scripts/RhythmClock.cs` | 음악 재생, DSP 기반 곡 시간, BPM·박자, 일시정지와 전역 재생 배율 관리 |
+| `Assets/Scripts/ChartData.cs` | `NoteData`, `BpmEventData`, 곡 정보와 채보 목록을 보관하는 ScriptableObject |
+| `Assets/Scripts/NoteManager.cs` | 채보 또는 랜덤 노트 생성, 음악 시간 기반 이동, 원근 메시 갱신, 노트 검색과 자동 MISS 처리 |
+| `Assets/Scripts/JudgementScoreManager.cs` | PERFECT·GREAT·GOOD·MISS 판정, 점수·콤보·최대 콤보와 최종 `PlayResult` 계산 |
+
+`Assets/Editor/RhythmPrototypeSetup.cs`는 게임플레이 스크립트가 아니라 Unity 에디터 보조 도구입니다. 프로젝트를 처음 열 때 `Main.unity`를 만들고 위 컴포넌트들을 루트 오브젝트에 연결합니다.
+
+스크립트 사이의 기본 실행 흐름은 다음과 같습니다.
+
+1. `RhythmGameController`가 세 시스템을 초기화하고 `RhythmClock`을 시작합니다.
+2. `NoteManager`가 `RhythmClock.SongTime`에 맞춰 노트를 생성하고 이동합니다.
+3. 키 입력이 발생하면 컨트롤러가 레인 번호와 곡 시간을 `JudgementScoreManager`에 전달합니다.
+4. 판정 시스템이 `NoteManager`에서 가장 가까운 노트를 찾아 판정과 점수를 계산합니다.
+5. 판정 이벤트를 받은 컨트롤러가 점수, 콤보와 판정 문구를 화면에 표시합니다.
+
+### 실제 채보 연결하기
+
+1. Project 창에서 우클릭합니다.
+2. `Create > Rhythm Game > Chart Data`를 선택합니다.
+3. 생성된 에셋에 곡 제목, Audio Clip, BPM과 노트 목록을 입력합니다.
+4. `Main` 씬의 `Rhythm Game Prototype` 오브젝트를 선택합니다.
+5. `Rhythm Game Controller > Chart Data` 칸에 만든 에셋을 연결합니다.
+
+`Chart Data`를 비워 두면 기존 프로토타입과 동일하게 1개 또는 왼손·오른손 동시 노트가 무작위로 생성됩니다.
+
+## 프로젝트 안의 파일과 폴더 역할
+
+| 경로 | 역할 |
+|---|---|
+| `Assets/Editor/RhythmPrototypeSetup.cs` | `Main.unity` 자동 생성, Input Actions 연결, 빌드 씬 등록을 수행하는 에디터 전용 도구 |
+| `Assets/Input/RhythmControls.inputactions` | A, S, D, J, K, L 키와 `Lane1`~`Lane6` 액션의 바인딩 정보 |
+| `Assets/Scripts/` | 위에서 설명한 5개의 리듬게임 런타임 스크립트가 들어 있는 폴더 |
+| `*.meta` | Unity가 에셋 참조를 유지하기 위해 자동으로 사용하는 GUID 파일이므로 삭제하거나 Git에서 제외하면 안 됨 |
+| `Packages/manifest.json` | 프로젝트가 사용할 Unity Input System 패키지 버전 지정 |
+| `ProjectSettings/ProjectVersion.txt` | 이 프로젝트를 열 Unity Editor 버전 지정 |
+| `README_KO.md` | 설치, 실행, 입력 설정, 코드 구조와 문제 해결 방법을 설명하는 문서 |
+| `Assets/Main.unity` | 프로젝트를 처음 열거나 메뉴 명령을 실행하면 자동 생성되는 실제 플레이 씬 |
 
 ## 오류가 발생할 때
 
@@ -152,8 +186,7 @@ Input System 1.17.0이 Unity 6000.5의 새 Editor API와 맞지 않아 생기는
 
 ## 다음 단계
 
-- AudioSource와 실제 BPM 기반 타이밍 추가
-- 랜덤 생성 대신 JSON 또는 ScriptableObject 채보 사용
+- JSON 채보를 `ChartData`로 변환하는 에디터 임포터 추가
 - 롱 노트와 플릭 노트 추가
 - 판정 이펙트 및 오브젝트 풀링 추가
 - Canvas와 TextMeshPro 기반 정식 UI로 교체
