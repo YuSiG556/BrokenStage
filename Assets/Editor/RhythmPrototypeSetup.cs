@@ -50,8 +50,8 @@ public static class RhythmPrototypeSetup
         // 모든 리듬게임 오브젝트의 부모가 될 루트 GameObject를 만든다.
         GameObject root = new GameObject("Rhythm Game Prototype");
         // 루트 오브젝트에 새 리듬게임 컨트롤러를 추가한다.
-        // RequireComponent 속성에 의해 RhythmClock, NoteManager와
-        // JudgementScoreManager도 같은 오브젝트에 자동으로 추가된다.
+        // RequireComponent 속성에 의해 RhythmClock, NoteManager,
+        // JudgementScoreManager와 ChartAutoLoader도 같은 오브젝트에 자동으로 추가된다.
         RhythmGameController prototype = root.AddComponent<RhythmGameController>();
         // 프로젝트의 InputActionAsset을 불러와 게임 컴포넌트의 공개 필드에 연결한다.
         prototype.inputActions = AssetDatabase.LoadAssetAtPath<InputActionAsset>(

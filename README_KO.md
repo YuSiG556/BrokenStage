@@ -135,7 +135,7 @@ Inspector에서 연결한 머티리얼은 프로젝트 에셋이므로 스크립
 
 ## 코드 구조
 
-기존의 큰 `RhythmGamePrototype.cs`는 다음 5개 게임플레이 스크립트로 분리했습니다.
+기존의 큰 `RhythmGamePrototype.cs`는 5개 핵심 게임플레이 스크립트로 분리했으며, 외부 채보 기반화를 위해 자동 탐색 스크립트 하나를 추가했습니다.
 
 | 파일 | 역할 |
 |---|---|
@@ -144,16 +144,18 @@ Inspector에서 연결한 머티리얼은 프로젝트 에셋이므로 스크립
 | `Assets/Scripts/ChartData.cs` | `NoteData`, `BpmEventData`, 곡 정보와 채보 목록을 보관하는 ScriptableObject |
 | `Assets/Scripts/NoteManager.cs` | 채보 또는 랜덤 노트 생성, 음악 시간 기반 이동, 원근 메시 갱신, 노트 검색과 자동 MISS 처리 |
 | `Assets/Scripts/JudgementScoreManager.cs` | PERFECT·GREAT·GOOD·MISS 판정, 점수·콤보·최대 콤보와 최종 `PlayResult` 계산 |
+| `Assets/Scripts/ChartAutoLoader.cs` | 음악을 자동 탐색하고 동명의 중립 JSON 채보가 있으면 런타임 `ChartData`로 변환하며, 채보가 없으면 랜덤 모드 유지 |
 
 `Assets/Editor/RhythmPrototypeSetup.cs`는 게임플레이 스크립트가 아니라 Unity 에디터 보조 도구입니다. 프로젝트를 처음 열 때 `Main.unity`를 만들고 위 컴포넌트들을 루트 오브젝트에 연결합니다.
 
 스크립트 사이의 기본 실행 흐름은 다음과 같습니다.
 
-1. `RhythmGameController`가 세 시스템을 초기화하고 `RhythmClock`을 시작합니다.
-2. `NoteManager`가 `RhythmClock.SongTime`에 맞춰 노트를 생성하고 이동합니다.
-3. 키 입력이 발생하면 컨트롤러가 레인 번호와 곡 시간을 `JudgementScoreManager`에 전달합니다.
-4. 판정 시스템이 `NoteManager`에서 가장 가까운 노트를 찾아 판정과 점수를 계산합니다.
-5. 판정 이벤트를 받은 컨트롤러가 점수, 콤보와 판정 문구를 화면에 표시합니다.
+1. Inspector에 `ChartData`가 없으면 `ChartAutoLoader`가 음악과 동명의 채보를 탐색합니다.
+2. `RhythmGameController`가 시스템을 초기화하고 `RhythmClock`을 시작합니다.
+3. `NoteManager`가 `RhythmClock.SongTime`에 맞춰 노트를 생성하고 이동합니다.
+4. 키 입력이 발생하면 컨트롤러가 레인 번호와 곡 시간을 `JudgementScoreManager`에 전달합니다.
+5. 판정 시스템이 `NoteManager`에서 가장 가까운 노트를 찾아 판정과 점수를 계산합니다.
+6. 판정 이벤트를 받은 컨트롤러가 점수, 콤보와 판정 문구를 화면에 표시합니다.
 
 ### 실제 채보 연결하기
 
@@ -165,13 +167,94 @@ Inspector에서 연결한 머티리얼은 프로젝트 에셋이므로 스크립
 
 `Chart Data`를 비워 두면 기존 프로토타입과 동일하게 1개 또는 왼손·오른손 동시 노트가 무작위로 생성됩니다.
 
+## 음악과 동명 채보 자동 탐색
+
+`RhythmGameController`의 `Chart Data` 슬롯을 비워 두면 `ChartAutoLoader`가 다음 우선순위로 데이터를 선택합니다.
+
+1. 음악과 동명의 중립 JSON이 있으면 해당 음악과 고정 채보 사용
+2. 음악만 있으면 해당 음악을 재생하면서 랜덤 채보 사용
+3. 음악이 하나도 없으면 기존 무음 랜덤 채보 사용
+
+Project 창에서 다음 폴더를 만듭니다.
+
+```text
+Assets/Resources/RhythmSongs/
+```
+
+음악과 채보 파일은 확장자를 제외한 이름이 같아야 합니다.
+
+```text
+Assets/Resources/RhythmSongs/
+├─ NeonDrive.ogg
+└─ NeonDrive.json
+```
+
+Unity가 두 파일을 각각 `NeonDrive`라는 이름의 `AudioClip`과 `TextAsset`으로 읽으며, `ChartAutoLoader`가 두 에셋을 한 쌍으로 연결합니다. JSON 파일이 없으면 `NeonDrive.ogg`를 재생하면서 랜덤 노트를 생성합니다.
+
+여러 음악이 있을 때는 `Rhythm Game Prototype` 오브젝트의 `Chart Auto Loader > Preferred Song Name`에 확장자를 제외한 이름을 입력합니다.
+
+```text
+Preferred Song Name: NeonDrive
+```
+
+비워 두면 동명 채보가 존재하는 음악을 우선하며, 후보가 여러 개면 파일명 오름차순으로 선택합니다.
+
+### 중립 JSON 형식
+
+```json
+{
+  "format": "BrokenStageChart/1",
+  "songId": "neon_drive",
+  "title": "Neon Drive",
+  "initialBpm": 120.0,
+  "musicOffset": 0.0,
+  "bpmEvents": [
+    { "beat": 0.0, "bpm": 120.0 }
+  ],
+  "notes": [
+    {
+      "noteId": 0,
+      "lane": 0,
+      "hitTime": 2.0,
+      "type": "Tap",
+      "endTime": 2.0
+    },
+    {
+      "noteId": 1,
+      "lane": 3,
+      "hitTime": 2.0,
+      "type": "Tap",
+      "endTime": 2.0
+    }
+  ]
+}
+```
+
+| 필드 | 의미 |
+|---|---|
+| `format` | 중립 채보 형식 버전. 현재는 설명용이며 파서 선택에는 아직 사용하지 않음 |
+| `songId` | 저장 데이터에서 곡을 식별할 고유 문자열 |
+| `title` | 곡 제목 |
+| `initialBpm` 또는 `bpm` | 시작 BPM |
+| `musicOffset` | 음악과 박자 기준점 사이의 초 단위 보정값 |
+| `noteId` | 노트 고유 번호. 중복되면 로더가 자동 보정 |
+| `lane` | 0=A, 1=S, 2=D, 3=J, 4=K, 5=L |
+| `hitTime` | 음악 시작부터 판정 시점까지의 초 단위 시간 |
+| `type` | `Tap` 또는 `Hold`. 현재 실제 플레이 판정은 `Tap`만 지원 |
+| `endTime` | 홀드 노트 종료 시간. 탭 노트는 `hitTime`과 동일하게 입력 |
+
+로더는 노트를 `hitTime` 순서로 자동 정렬하고 잘못된 레인과 음수 시간을 제외합니다. 같은 시간에 3개 이상이 있거나 동시 노트 2개가 한 손 영역에 몰리면 Console에 경고하지만, 원본 데이터를 임의로 다른 레인으로 옮기지는 않습니다.
+
+`.osu` 같은 다른 텍스트 형식이 동명으로 들어오면 JSON으로 잘못 해석하지 않고 변환 어댑터가 필요하다는 경고를 표시한 뒤 랜덤 채보를 유지합니다. 추후 에디터 형식을 결정하면 해당 파일을 위 중립 JSON으로 변환하는 `OsuManiaChartImporter` 등의 에디터 전용 스크립트만 추가하면 됩니다.
+
 ## 프로젝트 안의 파일과 폴더 역할
 
 | 경로 | 역할 |
 |---|---|
 | `Assets/Editor/RhythmPrototypeSetup.cs` | `Main.unity` 자동 생성, Input Actions 연결, 빌드 씬 등록을 수행하는 에디터 전용 도구 |
 | `Assets/Input/RhythmControls.inputactions` | A, S, D, J, K, L 키와 `Lane1`~`Lane6` 액션의 바인딩 정보 |
-| `Assets/Scripts/` | 위에서 설명한 5개의 리듬게임 런타임 스크립트가 들어 있는 폴더 |
+| `Assets/Scripts/` | 5개의 핵심 리듬게임 스크립트와 `ChartAutoLoader`가 들어 있는 폴더 |
+| `Assets/Resources/RhythmSongs/` | 사용자가 추가할 음악과 동명 중립 JSON 채보를 자동 탐색하는 권장 폴더 |
 | `*.meta` | Unity가 에셋 참조를 유지하기 위해 자동으로 사용하는 GUID 파일이므로 삭제하거나 Git에서 제외하면 안 됨 |
 | `Packages/manifest.json` | Unity Input System 1.20.0과 내장 Audio 모듈 사용 설정 |
 | `ProjectSettings/ProjectVersion.txt` | 이 프로젝트를 열 Unity Editor 버전 지정 |
@@ -232,7 +315,7 @@ Input System 1.17.0이 Unity 6000.5의 새 Editor API와 맞지 않아 생기는
 
 ## 다음 단계
 
-- JSON 채보를 `ChartData`로 변환하는 에디터 임포터 추가
+- 선택한 채보 에디터 형식(`.osu` 등)을 중립 JSON으로 변환하는 에디터 임포터 추가
 - 롱 노트와 플릭 노트 추가
 - 판정 이펙트 및 오브젝트 풀링 추가
 - Canvas와 TextMeshPro 기반 정식 UI로 교체

@@ -5,6 +5,7 @@ using UnityEngine.InputSystem;
 [RequireComponent(typeof(RhythmClock))]
 [RequireComponent(typeof(NoteManager))]
 [RequireComponent(typeof(JudgementScoreManager))]
+[RequireComponent(typeof(ChartAutoLoader))]
 [DisallowMultipleComponent]
 public class RhythmGameController : MonoBehaviour
 {
@@ -47,6 +48,10 @@ public class RhythmGameController : MonoBehaviour
     private RhythmClock rhythmClock;
     private NoteManager noteManager;
     private JudgementScoreManager judgementScoreManager;
+    private ChartAutoLoader chartAutoLoader;
+
+    // Inspector의 ChartData 또는 자동 탐색 결과 중 실제 플레이에 사용할 데이터다.
+    private ChartData activeChartData;
 
     // 모든 머티리얼 슬롯은 기본값이 None이다.
     // 프로젝트의 .mat 에셋을 Inspector에서 원하는 슬롯에 직접 연결한다.
@@ -84,6 +89,15 @@ public class RhythmGameController : MonoBehaviour
         rhythmClock = GetComponent<RhythmClock>();
         noteManager = GetComponent<NoteManager>();
         judgementScoreManager = GetComponent<JudgementScoreManager>();
+        chartAutoLoader = GetComponent<ChartAutoLoader>();
+
+        // Inspector에 직접 연결한 ChartData가 가장 높은 우선순위를 가진다.
+        // 연결된 에셋이 없을 때만 Resources/RhythmSongs의 동명 파일을 자동 탐색한다.
+        activeChartData = chartData;
+        if (activeChartData == null && chartAutoLoader != null)
+        {
+            chartAutoLoader.TryLoadChart(out activeChartData);
+        }
 
         BuildInputActions();
         BuildCamera();
@@ -95,7 +109,7 @@ public class RhythmGameController : MonoBehaviour
         // NoteManager에 이동과 랜덤 생성에 필요한 설정을 전달한다.
         noteManager.Initialize(
             rhythmClock,
-            chartData,
+            activeChartData,
             leftNoteMaterial,
             rightNoteMaterial,
             nearZ,
@@ -113,7 +127,7 @@ public class RhythmGameController : MonoBehaviour
         judgementScoreManager.Judged += HandleJudged;
 
         // 모든 시스템 준비가 끝난 뒤 음악 시계를 시작한다.
-        rhythmClock.StartClock(chartData);
+        rhythmClock.StartClock(activeChartData);
     }
 
     private void OnEnable()
