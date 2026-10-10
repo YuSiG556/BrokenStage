@@ -48,20 +48,28 @@ public class RhythmGameController : MonoBehaviour
     private NoteManager noteManager;
     private JudgementScoreManager judgementScoreManager;
 
-    // 플레이필드와 UI 표현에 사용할 머티리얼이다.
-    private Material boardMaterial;
-    private Material sideFloorMaterial;
-    private Material railMaterial;
-    private Material railGlowMaterial;
-    private Material gridMaterial;
-    private Material judgeMaterial;
-    private Material noteMaterialA;
-    private Material noteMaterialB;
-    private Material cityMaterialA;
-    private Material cityMaterialB;
-    private Material cityCyanMaterial;
-    private Material cityMagentaMaterial;
-    private Material[] laneGlowMaterials;
+    // 모든 머티리얼 슬롯은 기본값이 None이다.
+    // 프로젝트의 .mat 에셋을 Inspector에서 원하는 슬롯에 직접 연결한다.
+    [Header("Materials - Play Field")]
+    [SerializeField] private Material boardMaterial;
+    [SerializeField] private Material sideFloorMaterial;
+    [SerializeField] private Material railMaterial;
+    [SerializeField] private Material railGlowMaterial;
+    [SerializeField] private Material gridMaterial;
+    [SerializeField] private Material judgeMaterial;
+
+    [Header("Materials - Notes and Lane Input")]
+    [SerializeField] private Material leftNoteMaterial;
+    [SerializeField] private Material rightNoteMaterial;
+    [SerializeField] private Material leftLaneGlowMaterial;
+    [SerializeField] private Material rightLaneGlowMaterial;
+
+    [Header("Materials - Cyber City")]
+    [SerializeField] private Material cityMaterialA;
+    [SerializeField] private Material cityMaterialB;
+    [SerializeField] private Material cityCyanMaterial;
+    [SerializeField] private Material cityMagentaMaterial;
+
     private MeshRenderer[] laneGlowRenderers;
 
     private Camera gameCamera;
@@ -78,7 +86,6 @@ public class RhythmGameController : MonoBehaviour
         judgementScoreManager = GetComponent<JudgementScoreManager>();
 
         BuildInputActions();
-        BuildMaterials();
         BuildCamera();
         BuildStage();
 
@@ -89,8 +96,8 @@ public class RhythmGameController : MonoBehaviour
         noteManager.Initialize(
             rhythmClock,
             chartData,
-            noteMaterialA,
-            noteMaterialB,
+            leftNoteMaterial,
+            rightNoteMaterial,
             nearZ,
             farZ,
             judgeZ,
@@ -129,7 +136,6 @@ public class RhythmGameController : MonoBehaviour
     {
         HandleLaneActions();
         UpdateLaneGlows();
-        UpdateCyberpunkPulse();
         noteManager.Tick();
 
         if (judgementTimer > 0.0f)
@@ -225,47 +231,6 @@ public class RhythmGameController : MonoBehaviour
         judgementTimer = 0.45f;
     }
 
-    // 모든 런타임 머티리얼을 생성한다.
-    private void BuildMaterials()
-    {
-        Shader shader = Shader.Find("Unlit/Color");
-        Shader transparentShader = Shader.Find("Sprites/Default");
-        if (transparentShader == null)
-        {
-            transparentShader = shader;
-        }
-
-        boardMaterial = NewMaterial(shader, new Color(0.012f, 0.018f, 0.055f, 1.0f));
-        sideFloorMaterial = NewMaterial(shader, new Color(0.018f, 0.008f, 0.040f, 1.0f));
-        railMaterial = NewMaterial(shader, new Color(0.10f, 0.92f, 1.00f, 1.0f));
-        railGlowMaterial = NewMaterial(transparentShader, new Color(0.10f, 0.80f, 1.00f, 0.22f));
-        gridMaterial = NewMaterial(transparentShader, new Color(0.25f, 0.18f, 0.70f, 0.38f));
-        judgeMaterial = NewMaterial(shader, new Color(1.00f, 0.18f, 0.78f, 1.0f));
-        noteMaterialA = NewMaterial(shader, new Color(0.16f, 1.00f, 0.92f, 1.0f));
-        noteMaterialB = NewMaterial(shader, new Color(1.00f, 0.20f, 0.82f, 1.0f));
-        cityMaterialA = NewMaterial(shader, new Color(0.025f, 0.012f, 0.075f, 1.0f));
-        cityMaterialB = NewMaterial(shader, new Color(0.055f, 0.015f, 0.105f, 1.0f));
-        cityCyanMaterial = NewMaterial(shader, new Color(0.05f, 0.75f, 0.92f, 1.0f));
-        cityMagentaMaterial = NewMaterial(shader, new Color(0.95f, 0.08f, 0.72f, 1.0f));
-
-        laneGlowMaterials = new Material[LaneCount];
-        laneGlowRenderers = new MeshRenderer[LaneCount];
-        for (int i = 0; i < LaneCount; i++)
-        {
-            Color glowColor = i < 3
-                ? new Color(0.05f, 0.95f, 1.00f, 0.32f)
-                : new Color(1.00f, 0.08f, 0.78f, 0.32f);
-            laneGlowMaterials[i] = NewMaterial(transparentShader, glowColor);
-        }
-    }
-
-    private Material NewMaterial(Shader shader, Color color)
-    {
-        Material material = new Material(shader);
-        material.color = color;
-        return material;
-    }
-
     // 사다리꼴 필드를 비스듬히 내려다보는 원근 카메라를 만든다.
     private void BuildCamera()
     {
@@ -286,6 +251,9 @@ public class RhythmGameController : MonoBehaviour
     // 플레이필드, 레일, 격자, 판정선과 사이버 도시를 만든다.
     private void BuildStage()
     {
+        // Renderer 참조만 런타임에 만들고 머티리얼은 Inspector 값을 그대로 사용한다.
+        laneGlowRenderers = new MeshRenderer[LaneCount];
+
         CreateQuadMesh(
             "Left Cyber Deck",
             new Vector3(-13.0f, -0.03f, nearZ),
@@ -346,13 +314,17 @@ public class RhythmGameController : MonoBehaviour
         float farLeft = -farHalfWidth + farLaneWidth * lane + 0.025f;
         float farRight = farLeft + farLaneWidth - 0.05f;
 
+        Material laneGlowMaterial = lane < 3
+            ? leftLaneGlowMaterial
+            : rightLaneGlowMaterial;
+
         GameObject glow = CreateQuadMesh(
             "Held Lane Glow " + (lane + 1),
             new Vector3(nearLeft, 0.018f, nearZ),
             new Vector3(nearRight, 0.018f, nearZ),
             new Vector3(farLeft, 0.018f, farZ),
             new Vector3(farRight, 0.018f, farZ),
-            laneGlowMaterials[lane]);
+            laneGlowMaterial);
 
         laneGlowRenderers[lane] = glow.GetComponent<MeshRenderer>();
         laneGlowRenderers[lane].enabled = false;
@@ -509,29 +481,11 @@ public class RhythmGameController : MonoBehaviour
             return;
         }
 
-        float pulse = 0.28f + Mathf.Sin(Time.unscaledTime * 12.0f) * 0.08f;
         for (int lane = 0; lane < LaneCount; lane++)
         {
             bool held = IsLaneHeld(lane);
             laneGlowRenderers[lane].enabled = held;
-            if (held)
-            {
-                Color glowColor = lane < 3
-                    ? new Color(0.05f, 0.95f, 1.00f, pulse)
-                    : new Color(1.00f, 0.08f, 0.78f, pulse);
-                laneGlowMaterials[lane].color = glowColor;
-            }
         }
-    }
-
-    private void UpdateCyberpunkPulse()
-    {
-        float pulse = 0.78f + Mathf.Sin(Time.unscaledTime * 7.0f) * 0.22f;
-        judgeMaterial.color = new Color(
-            1.0f,
-            0.10f + pulse * 0.12f,
-            0.62f + pulse * 0.20f,
-            1.0f);
     }
 
     private float HalfWidthAtZ(float z)
@@ -661,25 +615,6 @@ public class RhythmGameController : MonoBehaviour
             gameplayActionMap.Dispose();
         }
 
-        Destroy(boardMaterial);
-        Destroy(sideFloorMaterial);
-        Destroy(railMaterial);
-        Destroy(railGlowMaterial);
-        Destroy(gridMaterial);
-        Destroy(judgeMaterial);
-        Destroy(noteMaterialA);
-        Destroy(noteMaterialB);
-        Destroy(cityMaterialA);
-        Destroy(cityMaterialB);
-        Destroy(cityCyanMaterial);
-        Destroy(cityMagentaMaterial);
-
-        if (laneGlowMaterials != null)
-        {
-            for (int i = 0; i < laneGlowMaterials.Length; i++)
-            {
-                Destroy(laneGlowMaterials[i]);
-            }
-        }
+        // Inspector에서 연결한 .mat 에셋은 프로젝트 자산이므로 여기서 Destroy하지 않는다.
     }
 }

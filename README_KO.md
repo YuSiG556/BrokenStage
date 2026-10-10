@@ -100,13 +100,46 @@ Hierarchy의 `Rhythm Game Prototype`을 선택한 다음 Inspector에서 조절�
 
 Play 중에 변경한 값은 Play를 종료하면 원래대로 돌아갑니다. 계속 사용할 값은 Play를 끈 상태에서 변경하세요.
 
+## 외부 머티리얼 연결하기
+
+이 프로젝트는 아트 에셋을 자유롭게 교체할 수 있도록 코드 내부에서 머티리얼을 생성하지 않습니다. `Main` 씬을 새로 만들면 `Rhythm Game Controller`의 모든 Material 슬롯은 `None (Material)` 상태입니다.
+
+1. Project 창의 `Assets`에서 우클릭하고 `Create > Folder`를 선택합니다.
+2. 폴더 이름을 `Materials`로 지정합니다.
+3. `Assets/Materials`에서 우클릭하고 `Create > Material`로 필요한 `.mat` 에셋을 만듭니다.
+4. 각 머티리얼에 원하는 Shader, 색상, 텍스처와 발광 설정을 지정합니다.
+5. `Main` 씬에서 `Rhythm Game Prototype` 오브젝트를 선택합니다.
+6. Inspector의 `Rhythm Game Controller`에서 아래 슬롯에 `.mat` 에셋을 드래그합니다.
+7. `Ctrl + S`로 씬을 저장합니다.
+
+| Inspector 그룹 | 슬롯 | 적용 대상 |
+|---|---|---|
+| Materials - Play Field | Board Material | 메인 사다리꼴 플레이필드 |
+| Materials - Play Field | Side Floor Material | 플레이필드 양옆 바닥 |
+| Materials - Play Field | Rail Material | 레인 경계선과 뒤쪽 게이트 |
+| Materials - Play Field | Rail Glow Material | 레인 경계선의 넓은 발광 영역 |
+| Materials - Play Field | Grid Material | 플레이필드 가로 격자선 |
+| Materials - Play Field | Judge Material | 판정선 |
+| Materials - Notes and Lane Input | Left Note Material | A, S, D 레인의 노트 |
+| Materials - Notes and Lane Input | Right Note Material | J, K, L 레인의 노트 |
+| Materials - Notes and Lane Input | Left Lane Glow Material | A, S, D 키를 누를 때 표시되는 레인 |
+| Materials - Notes and Lane Input | Right Lane Glow Material | J, K, L 키를 누를 때 표시되는 레인 |
+| Materials - Cyber City | City Material A/B | 사이버 도시 건물 본체 |
+| Materials - Cyber City | City Cyan/Magenta Material | 건물 네온과 뒤쪽 포털 |
+
+머티리얼을 연결하지 않은 부분은 렌더링되지 않거나 사용 중인 렌더 파이프라인의 기본 오류 색상으로 보일 수 있습니다. 이는 슬롯을 공백으로 둔 의도된 상태이며 원하는 `.mat` 파일을 연결하면 해결됩니다.
+
+Inspector에서 연결한 머티리얼은 프로젝트 에셋이므로 스크립트가 색상을 덮어쓰거나 종료 시 `Destroy()`하지 않습니다. 레인 입력 효과는 지정한 머티리얼의 외형을 유지한 채 Renderer의 활성화 여부만 변경합니다.
+
+`Tools > Rhythm Prototype > Create or Reset Main Scene`을 실행하면 씬이 다시 생성되면서 연결한 머티리얼도 초기화됩니다. 실행하기 전에 사용 중인 머티리얼 목록을 확인하고, 실행 후 다시 연결해 주세요.
+
 ## 코드 구조
 
 기존의 큰 `RhythmGamePrototype.cs`는 다음 5개 게임플레이 스크립트로 분리했습니다.
 
 | 파일 | 역할 |
 |---|---|
-| `Assets/Scripts/RhythmGameController.cs` | 게임 시작과 종료, Input System 입력, 카메라·플레이필드·사이버 도시·UI 및 다른 시스템 연결 |
+| `Assets/Scripts/RhythmGameController.cs` | 게임 시작과 종료, Input System 입력, 외부 머티리얼 슬롯, 카메라·플레이필드·사이버 도시·UI 및 다른 시스템 연결 |
 | `Assets/Scripts/RhythmClock.cs` | 음악 재생, DSP 기반 곡 시간, BPM·박자, 일시정지와 전역 재생 배율 관리 |
 | `Assets/Scripts/ChartData.cs` | `NoteData`, `BpmEventData`, 곡 정보와 채보 목록을 보관하는 ScriptableObject |
 | `Assets/Scripts/NoteManager.cs` | 채보 또는 랜덤 노트 생성, 음악 시간 기반 이동, 원근 메시 갱신, 노트 검색과 자동 MISS 처리 |
@@ -140,7 +173,7 @@ Play 중에 변경한 값은 Play를 종료하면 원래대로 돌아갑니다. 
 | `Assets/Input/RhythmControls.inputactions` | A, S, D, J, K, L 키와 `Lane1`~`Lane6` 액션의 바인딩 정보 |
 | `Assets/Scripts/` | 위에서 설명한 5개의 리듬게임 런타임 스크립트가 들어 있는 폴더 |
 | `*.meta` | Unity가 에셋 참조를 유지하기 위해 자동으로 사용하는 GUID 파일이므로 삭제하거나 Git에서 제외하면 안 됨 |
-| `Packages/manifest.json` | 프로젝트가 사용할 Unity Input System 패키지 버전 지정 |
+| `Packages/manifest.json` | Unity Input System 1.20.0과 내장 Audio 모듈 사용 설정 |
 | `ProjectSettings/ProjectVersion.txt` | 이 프로젝트를 열 Unity Editor 버전 지정 |
 | `README_KO.md` | 설치, 실행, 입력 설정, 코드 구조와 문제 해결 방법을 설명하는 문서 |
 | `Assets/Main.unity` | 프로젝트를 처음 열거나 메뉴 명령을 실행하면 자동 생성되는 실제 플레이 씬 |
@@ -177,6 +210,19 @@ Input System 1.17.0이 Unity 6000.5의 새 Editor API와 맞지 않아 생기는
 3. `Active Input Handling`을 `Input System Package (New)` 또는 `Both`로 설정합니다.
 4. Unity Editor를 재시작합니다.
 5. Play 후 Game 창 내부를 클릭하고 다시 입력합니다.
+
+### `AudioSource` 또는 `AudioClip`을 찾을 수 없을 때
+
+이 오류는 Unity 내장 Audio 모듈이 비활성화되어 있을 때 발생합니다. 수정된 프로젝트의 `Packages/manifest.json`에는 `"com.unity.modules.audio": "1.0.0"`이 포함되어 있습니다.
+
+기존 프로젝트를 직접 수정하려면 다음 순서로 진행합니다.
+
+1. Unity Editor를 종료합니다.
+2. `Packages/manifest.json`을 메모장으로 엽니다.
+3. `dependencies` 안에 `"com.unity.modules.audio": "1.0.0"`을 추가합니다.
+4. 바로 위 패키지 항목 끝에 쉼표가 있는지 확인하고 저장합니다.
+5. Unity Hub에서 프로젝트를 다시 엽니다.
+6. 패키지 설치와 스크립트 컴파일이 끝날 때까지 기다립니다.
 
 ### 플레이 화면이 생성되지 않을 때
 
